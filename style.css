@@ -1,0 +1,7 @@
+.map-container {
+    width: 100%; 
+    max-width: 900px;
+    height: 500px;
+    border: 2px solid #45562d;
+    margin: 20px auto;
+}
