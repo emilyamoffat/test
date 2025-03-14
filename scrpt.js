@@ -173,6 +173,15 @@ map.on('load', async () => {
     groceryLegendItem.innerHTML = '<span style="background-color: #6495ed;"></span> Grocery';
     legend.appendChild(groceryLegendItem);
 
+    const groceryCheckbox = document.createElement('input');
+    groceryCheckbox.type = 'checkbox';
+    groceryCheckbox.checked = true;
+    groceryCheckbox.onchange = (e) => {
+        map.setLayoutProperty('grocery-point', 'visibility', e.target.checked ? 'visible' : 'none');
+        map.setLayoutProperty('buffered-layer', 'visibility', e.target.checked ? 'visible' : 'none');
+    };
+    groceryLegendItem.prepend(groceryCheckbox);
+
     const grocerySliderLabel = document.createElement('label');
     grocerySliderLabel.innerHTML = 'Buffer Size: 0.25 - 1.25 km';
     groceryLegendItem.appendChild(grocerySliderLabel);
@@ -202,6 +211,15 @@ map.on('load', async () => {
         legendItem.innerHTML = `<span style="background-color: ${color};"></span> ${category}`;
         legend.appendChild(legendItem);
 
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.onchange = (e) => {
+            map.setLayoutProperty(`${category.toLowerCase().replace(/ /g, '-')}-point`, 'visibility', e.target.checked ? 'visible' : 'none');
+            map.setLayoutProperty(`${category.toLowerCase().replace(/ /g, '-')}-buffered-layer`, 'visibility', e.target.checked ? 'visible' : 'none');
+        };
+        legendItem.prepend(checkbox);
+
         const sliderLabel = document.createElement('label');
         sliderLabel.innerHTML = 'Buffer Size: 0.25 - 1.25 km';
         legendItem.appendChild(sliderLabel);
@@ -224,4 +242,85 @@ map.on('load', async () => {
         };
         legendItem.appendChild(slider);
     });
+
+    // Load TTC points data
+    const ttcResponse = await fetch('https://raw.githubusercontent.com/chann15/GGR472_Final_Project/main/Data/TTC%20POINTS.geojson');
+    const ttcData = await ttcResponse.json();
+
+    // Add TTC points layer
+    map.addSource('ttc-data', {
+        type: 'geojson',
+        data: ttcData
+    });
+
+    map.addLayer({
+        'id': 'ttc-point',
+        'type': 'circle',
+        'source': 'ttc-data',
+        'paint': {
+            'circle-radius': 5,
+            'circle-color': '#ff0000',
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#ffffff'
+        }
+    });
+
+    // Create buffers for TTC points using Turf.js
+    const bufferedTTCFeatures = ttcData.features.map(feature => {
+        return turf.buffer(feature, 0.5, { units: 'kilometers' }); // 0.5 km buffer
+    });
+
+    // Combine all buffers into one GeoJSON feature collection
+    const bufferedTTCGeoJSON = turf.featureCollection(bufferedTTCFeatures);
+
+    // Add buffered layer for TTC points
+    map.addSource('ttc-buffered-data', {
+        type: 'geojson',
+        data: bufferedTTCGeoJSON
+    });
+
+    map.addLayer({
+        'id': 'ttc-buffered-layer',
+        'type': 'fill',
+        'source': 'ttc-buffered-data',
+        'paint': {
+            'fill-color': '#ff0000',
+            'fill-opacity': 0.3,
+            'fill-outline-color': '#ff0000'
+        }
+    });
+
+    // Add TTC legend and slider
+    const ttcLegendItem = document.createElement('div');
+    ttcLegendItem.innerHTML = '<span style="background-color: #ff0000;"></span> TTC Points';
+    legend.appendChild(ttcLegendItem);
+
+    const ttcCheckbox = document.createElement('input');
+    ttcCheckbox.type = 'checkbox';
+    ttcCheckbox.checked = true;
+    ttcCheckbox.onchange = (e) => {
+        map.setLayoutProperty('ttc-point', 'visibility', e.target.checked ? 'visible' : 'none');
+        map.setLayoutProperty('ttc-buffered-layer', 'visibility', e.target.checked ? 'visible' : 'none');
+    };
+    ttcLegendItem.prepend(ttcCheckbox);
+
+    const ttcSliderLabel = document.createElement('label');
+    ttcSliderLabel.innerHTML = 'Buffer Size: 0.25 - 1.25 km';
+    ttcLegendItem.appendChild(ttcSliderLabel);
+
+    const ttcSlider = document.createElement('input');
+    ttcSlider.type = 'range';
+    ttcSlider.min = '0.25';
+    ttcSlider.max = '1.25';
+    ttcSlider.step = '0.25';
+    ttcSlider.value = '0.5';
+    ttcSlider.oninput = (e) => {
+        const bufferSize = parseFloat(e.target.value);
+        const bufferedTTCFeatures = ttcData.features.map(feature => {
+            return turf.buffer(feature, bufferSize, { units: 'kilometers' });
+        });
+        const bufferedTTCGeoJSON = turf.featureCollection(bufferedTTCFeatures);
+        map.getSource('ttc-buffered-data').setData(bufferedTTCGeoJSON);
+    };
+    ttcLegendItem.appendChild(ttcSlider);
 });
