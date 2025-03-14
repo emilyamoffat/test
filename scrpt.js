@@ -82,85 +82,69 @@ map.on('load', async () => {
         map.getCanvas().style.cursor = '';
     });
 
-    // Load POI data
-    const poiResponse = await fetch('https://raw.githubusercontent.com/emilyamoffat/test/main/tor%20Places%20of%20Interest%20and%20Attractions.geojson');
-    const poiData = await poiResponse.json();
+    // Load Parks and Recreation data
+    const parksResponse = await fetch('https://raw.githubusercontent.com/chann15/GGR472_Final_Project/ab671d350e44e397a5663ec1fb1cdf4d700a5fa9/Data/Parks%20and%20Recreation_TOR.geojson');
+    const parksData = await parksResponse.json();
 
-    // Define colors for each category
-    const categoryColors = {
-        'Landmark': '#ff6347',
-        'Museum': '#ffa500',
-        'Performing Arts': '#8a2be2',
-        'Nature/ Park': '#32cd32',
-        'Attraction': '#ff4500',
-        'Gallery': '#1e90ff',
-        'Sports / Entertainment Venue': '#ff1493',
-        'Transportation': '#ff69b4',
-        'Convention & Trade Centres': '#00ced1'
+    // Define colors for each type
+    const typeColors = {
+        'Nature/ Park': '#32cd32'
     };
 
-    // Define buffer sizes for each category
-    const categoryBufferSizes = {
-        'Landmark': 0.7,
-        'Museum': 0.8,
-        'Performing Arts': 0.6,
-        'Nature/ Park': 1.0,
-        'Attraction': 0.9,
-        'Gallery': 0.5,
-        'Sports / Entertainment Venue': 0.4,
-        'Transportation': 0.3,
-        'Convention & Trade Centres': 0.2
+    // Define buffer sizes for each type
+    const typeBufferSizes = {
+        'Nature/ Park': 1.0
     };
 
-    // Split POI data into categories
-    const categories = [...new Set(poiData.features.map(feature => feature.properties.CATEGORY))];
+    // Split Parks data into types
+    const types = [...new Set(parksData.features.map(feature => feature.properties.TYPE))];
 
-    categories.forEach(category => {
-        const categoryFeatures = poiData.features.filter(feature => feature.properties.CATEGORY === category);
-        const categoryGeoJSON = {
+    types.forEach(type => {
+        const typeFeatures = parksData.features.filter(feature => feature.properties.TYPE === type);
+        const typeGeoJSON = {
             type: 'FeatureCollection',
-            features: categoryFeatures
+            features: typeFeatures
         };
 
-        map.addSource(`${category.toLowerCase().replace(/ /g, '-')}-data`, {
+        map.addSource(`${type.toLowerCase().replace(/ /g, '-')}-data`, {
             type: 'geojson',
-            data: categoryGeoJSON
+            data: typeGeoJSON
         });
 
         map.addLayer({
-            'id': `${category.toLowerCase().replace(/ /g, '-')}-point`,
+            'id': `${type.toLowerCase().replace(/ /g, '-')}-point`,
             'type': 'circle',
-            'source': `${category.toLowerCase().replace(/ /g, '-')}-data`,
+            'source': `${type.toLowerCase().replace(/ /g, '-')}-data`,
             'paint': {
                 'circle-radius': 5,
-                'circle-color': categoryColors[category] || '#ff6347',
+                'circle-color': typeColors[type] || '#ff6347',
                 'circle-stroke-width': 1,
                 'circle-stroke-color': '#ffffff'
             }
         });
 
-        // Create buffers for POI data using Turf.js
-        const bufferedPOIFeatures = categoryFeatures.map(feature => {
-            return turf.buffer(feature, categoryBufferSizes[category] || 0.5, { units: 'kilometers' }); // Buffer size based on category
+        // Create buffers for Parks data using Turf.js
+        const bufferedPOIFeatures = typeFeatures.map(feature => {
+            return turf.buffer(feature, typeBufferSizes[type] || 0.5, { units: 'kilometers' }); // Buffer size based on type
         });
 
         // Combine all buffers into one GeoJSON feature collection
         const bufferedPOIGeoJSON = turf.featureCollection(bufferedPOIFeatures);
 
-        // Add buffered layer for POI data
-        map.addSource(`${category.toLowerCase().replace(/ /g, '-')}-buffered-data`, {
+        // Add buffered layer for Parks data
+        map.addSource(`${type.toLowerCase().replace(/ /g, '-')}-buffered-data`, {
             type: 'geojson',
             data: bufferedPOIGeoJSON
         });
 
         map.addLayer({
-            'id': `${category.toLowerCase().replace(/ /g, '-')}-buffered-layer`,
+            'id': `${type.toLowerCase().replace(/ /g, '-')}-buffered-layer`,
             'type': 'fill',
-            'source': `${category.toLowerCase().replace(/ /g, '-')}-buffered-data`,
+            'source': `${type.toLowerCase().replace(/ /g, '-')}-buffered-data`,
             'paint': {
-                'fill-color': categoryColors[category] || '#ff6347',
+                'fill-color': typeColors[type] || '#ff6347',
                 'fill-opacity': 0.3,
-                'fill-outline-color': categoryColors[category] || '#ff6347'
+                'fill-outline-color': typeColors[type] || '#ff6347'
             }
         });
     });
@@ -202,21 +186,21 @@ map.on('load', async () => {
     };
     groceryLegendItem.appendChild(grocerySlider);
 
-    // Add POI legends and sliders
-    categories.forEach(category => {
-        const color = categoryColors[category] || '#ff6347';
+    // Add Parks legends and sliders
+    types.forEach(type => {
+        const color = typeColors[type] || '#ff6347';
 
         // Add legend item
         const legendItem = document.createElement('div');
-        legendItem.innerHTML = `<span style="background-color: ${color};"></span> ${category}`;
+        legendItem.innerHTML = `<span style="background-color: ${color};"></span> ${type}`;
         legend.appendChild(legendItem);
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = true;
         checkbox.onchange = (e) => {
-            map.setLayoutProperty(`${category.toLowerCase().replace(/ /g, '-')}-point`, 'visibility', e.target.checked ? 'visible' : 'none');
-            map.setLayoutProperty(`${category.toLowerCase().replace(/ /g, '-')}-buffered-layer`, 'visibility', e.target.checked ? 'visible' : 'none');
+            map.setLayoutProperty(`${type.toLowerCase().replace(/ /g, '-')}-point`, 'visibility', e.target.checked ? 'visible' : 'none');
+            map.setLayoutProperty(`${type.toLowerCase().replace(/ /g, '-')}-buffered-layer`, 'visibility', e.target.checked ? 'visible' : 'none');
         };
         legendItem.prepend(checkbox);
 
@@ -230,15 +214,15 @@ map.on('load', async () => {
         slider.min = '0.25';
         slider.max = '1.25';
         slider.step = '0.25';
-        slider.value = categoryBufferSizes[category] || '0.5';
+        slider.value = typeBufferSizes[type] || '0.5';
         slider.oninput = (e) => {
             const bufferSize = parseFloat(e.target.value);
-            const categoryFeatures = poiData.features.filter(feature => feature.properties.CATEGORY === category);
-            const bufferedPOIFeatures = categoryFeatures.map(feature => {
+            const typeFeatures = parksData.features.filter(feature => feature.properties.TYPE === type);
+            const bufferedPOIFeatures = typeFeatures.map(feature => {
                 return turf.buffer(feature, bufferSize, { units: 'kilometers' });
             });
             const bufferedPOIGeoJSON = turf.featureCollection(bufferedPOIFeatures);
-            map.getSource(`${category.toLowerCase().replace(/ /g, '-')}-buffered-data`).setData(bufferedPOIGeoJSON);
+            map.getSource(`${type.toLowerCase().replace(/ /g, '-')}-buffered-data`).setData(bufferedPOIGeoJSON);
         };
         legendItem.appendChild(slider);
     });
